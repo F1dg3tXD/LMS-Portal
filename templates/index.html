@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>LMS Portal</title>
+    
+        <!-- Link to the CSS file -->
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    
+        <!-- Markdown parser -->
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    </head>
+<body>
+    <h1>LMS Portal</h1>
+    <div id="chat"></div>
+    <input id="msg" placeholder="Type something..." style="width: 80%;">
+    <button onclick="send()">Send</button>
+    <button onclick="startSpeech()">🎤 Speak</button>
+
+    <input id="msg" placeholder="Type something..." onkeydown="checkEnter(event)">
+
+<script>
+    function send() {
+        const input = document.getElementById("msg");
+        const chat = document.getElementById("chat");
+        const message = input.value;
+        if (!message) return;
+
+        chat.innerHTML += `<p class="user"><strong>You:</strong> ${marked.parseInline(message)}</p>`;
+        input.value = "";
+
+        fetch("/chat", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({message})
+        })
+        .then(res => res.json())
+        .then(data => {
+            chat.innerHTML += `<p class="hostess"><strong>AI:</strong> ${marked.parse(data.response)}</p>`;
+            chat.scrollTop = chat.scrollHeight;
+        });
+    }
+
+    function checkEnter(e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            send();
+        }
+    }
+
+    function startSpeech() {
+        // Support both standard and webkit-prefixed APIs
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert("Speech recognition not supported in this browser.");
+            return;
+        }
+        const recognition = new SpeechRecognition();
+        recognition.lang = "en-US";
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            document.getElementById("msg").value = transcript;
+            send(); // Optionally auto-send
+        };
+        recognition.onerror = function(event) {
+            alert("Speech recognition error: " + event.error);
+        };
+        recognition.start();
+    }
+</script>
+</body>
+</html>
