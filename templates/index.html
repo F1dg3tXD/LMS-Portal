@@ -9,6 +9,10 @@
     
         <!-- Markdown parser -->
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+        <!-- Code syntax highlighting -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     </head>
 <body>
     <h1>LMS Portal</h1>
@@ -31,12 +35,22 @@
 
         fetch("/chat", {
             method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({message})
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message })
         })
         .then(res => res.json())
         .then(data => {
-            chat.innerHTML += `<p class="hostess"><strong>AI:</strong> ${marked.parse(data.response)}</p>`;
+            const rendered = marked.parse(data.response);
+            const container = document.createElement("div");
+            container.classList.add("hostess");
+            container.innerHTML = `<strong>Hostess:</strong><br>${rendered}`;
+            chat.appendChild(container);
+
+            // Apply syntax highlighting after insertion
+            container.querySelectorAll("pre code").forEach((block) => {
+                hljs.highlightElement(block);
+            });
+
             chat.scrollTop = chat.scrollHeight;
         });
     }
