@@ -3,11 +3,10 @@ import threading
 import requests
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QTextEdit, QLineEdit, QPushButton,
-    QVBoxLayout, QWidget, QLabel, QComboBox
+    QVBoxLayout, QWidget
 )
-from PyQt6.QtCore import Qt
 
-from speech_listener import get_input_devices, start_listening
+from speech_listener import start_listening, stop_listening
 
 LM_STUDIO_API_URL = "http://localhost:1234/v1/chat/completions"
 
@@ -15,8 +14,7 @@ def load_system_prompt(path="prompt.txt"):
     try:
         with open(path, "r", encoding="utf-8") as f:
             return {"role": "system", "content": f.read()}
-    except Exception as e:
-        print(f"Error loading system prompt: {e}")
+    except Exception:
         return {"role": "system", "content": "You are a helpful assistant."}
 
 SYSTEM_PROMPT = load_system_prompt()
@@ -27,7 +25,8 @@ class HostessApp(QMainWindow):
         self.setWindowTitle("Hostess AI")
         self.setGeometry(100, 100, 700, 550)
 
-        # --- Chat Display ---
+        self.is_listening = False
+
         self.chat_display = QTextEdit()
         self.chat_display.setReadOnly(True)
 
@@ -37,24 +36,14 @@ class HostessApp(QMainWindow):
         self.send_button = QPushButton("Send")
         self.send_button.clicked.connect(self.send_message)
 
-        # --- Microphone Selector ---
-        self.device_label = QLabel("🎤 Microphone:")
-        self.device_dropdown = QComboBox()
-        self.devices = get_input_devices()
-        for idx, name in self.devices:
-            self.device_dropdown.addItem(name, userData=idx)
+        self.listen_button = QPushButton("🎤 Start Listening")
+        self.listen_button.clicked.connect(self.toggle_listening)
 
-        self.listen_button = QPushButton("Start Listening")
-        self.listen_button.clicked.connect(self.start_listening_thread)
-
-        # --- Layout ---
         layout = QVBoxLayout()
-        layout.addWidget(self.device_label)
-        layout.addWidget(self.device_dropdown)
-        layout.addWidget(self.listen_button)
         layout.addWidget(self.chat_display)
         layout.addWidget(self.input_box)
         layout.addWidget(self.send_button)
+        layout.addWidget(self.listen_button)
 
         container = QWidget()
         container.setLayout(layout)
@@ -92,16 +81,15 @@ class HostessApp(QMainWindow):
         self.input_box.setText(message)
         self.send_message()
 
-    def start_listening_thread(self):
-        mic_index = self.device_dropdown.currentData()
-        print(f"[🔊 Using mic index: {mic_index}]")
-
-        def threaded_listen():
-            start_listening(callback=self.handle_voice_command, mic_index=mic_index)
-
-        threading.Thread(target=threaded_listen, daemon=True).start()
-        self.listen_button.setEnabled(False)
-        self.listen_button.setText("🎤 Listening...")
+    def toggle_listening(self):
+        if self.is_listening:
+            stop_listening()
+            self.listen_button.setText("🎤 Start Listening")
+            self.is_listening = False
+        else:
+            threading.Thread(target=start_listening, args=(self.handle_voice_command,), daemon=True).start()
+            self.listen_button.setText("🛑 Stop Listening")
+            self.is_listening = True
 
 def run_app():
     app = QApplication(sys.argv)
