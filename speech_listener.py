@@ -2,25 +2,30 @@ import whisper
 import pyaudio
 import wave
 import io
+import numpy as np
 import threading
 import re
 import requests
 import tempfile
+from whisper.audio import load_audio
+
 
 # Constants
 WAKE_WORDS = ["hostess", "hey hostess"]
 RECORD_SECONDS = 5
 MODEL = whisper.load_model("base")
-
-# Flask endpoint
+# Replace with your actual chat endpoint
+# This should point to your Flask server or LM Studio API
 CHAT_ENDPOINT = "http://localhost:5000/chat"
 
 def transcribe_audio():
     p = pyaudio.PyAudio()
     DEVICE_INDEX = 4  # <-- Replace with your desired device index
+    device_info = p.get_device_info_by_index(mic_index)
+    print(f"[🔍 Opening mic index {mic_index}] {device_info['name']}")
     stream = p.open(format=pyaudio.paInt16,
                     channels=1,
-                    rate=16000,
+                    rate=44100,
                     input=True,
                     frames_per_buffer=1024,
                     input_device_index=DEVICE_INDEX)
@@ -67,10 +72,59 @@ def send_to_chat(text):
     except Exception as e:
         print(f"[Error]: {e}")
 
-# def start_listening():
-#     thread = threading.Thread(target=transcribe_audio)
-#     thread.daemon = True
-#     thread.start()
+def start_listening(callback=None, mic_index=0):
+    def listen_loop():
+        p = pyaudio.PyAudio()
+
+        for i in range(p.get_device_count()):
+            info = p.get_device_info_by_index(i)
+            if info.get('maxInputChannels') > 0:
+                print(f"[🎙 Device {i}]: {info['name']}")
+
+        stream = p.open(format=pyaudio.paInt16,
+                        channels=1,
+                        rate=16000,
+                        input=True,
+                        input_device_index=mic_index,
+                        frames_per_buffer=1024)
+
+        print("[🎤 Listening for 'Hostess' or 'Hey Hostess'...]")
+
+        while True:
+            frames = []
+            for _ in range(0, int(16000 / 1024 * RECORD_SECONDS)):
+                data = stream.read(1024)
+                frames.append(data)
+
+            # Convert raw audio bytes to a NumPy array
+            raw_audio = b"".join(frames)
+            audio_np = np.frombuffer(raw_audio, np.int16).astype(np.float32) / 32768.0
+
+            try:
+                result = MODEL.transcribe(audio_np)
+                text = result["text"].lower().strip()
+                print(f"[🗣 Heard]: {text}")
+
+                if any(word in text for word in WAKE_WORDS):
+                    command = re.sub(r"^(hey\s+)?hostess[, ]*", "", text)
+                    print(f"[🤖 Triggered Command]: {command}")
+                    if command and callback:
+                        callback(command)
+            except Exception as e:
+                print(f"[❌ Whisper Error]: {e}")
+
+    thread = threading.Thread(target=listen_loop)
+    thread.daemon = True
+    thread.start()
+
+def get_input_devices():
+    p = pyaudio.PyAudio()
+    devices = []
+    for i in range(p.get_device_count()):
+        info = p.get_device_info_by_index(i)
+        if info.get('maxInputChannels') > 0:
+            devices.append((i, info['name']))
+    return devices
 
 def list_input_devices():
     p = pyaudio.PyAudio()
