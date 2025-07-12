@@ -5,10 +5,10 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QTextEdit, QLineEdit, QPushButton,
     QVBoxLayout, QWidget
 )
-
 from speech_listener import start_listening, stop_listening
 
 LM_STUDIO_API_URL = "http://localhost:1234/v1/chat/completions"
+
 
 def load_system_prompt(path="prompt.txt"):
     try:
@@ -18,6 +18,7 @@ def load_system_prompt(path="prompt.txt"):
         return {"role": "system", "content": "You are a helpful assistant."}
 
 SYSTEM_PROMPT = load_system_prompt()
+
 
 class HostessApp(QMainWindow):
     def __init__(self):
@@ -91,11 +92,13 @@ class HostessApp(QMainWindow):
             self.listen_button.setText("🛑 Stop Listening")
             self.is_listening = True
 
+
 def run_app():
     app = QApplication(sys.argv)
     window = HostessApp()
     window.show()
     sys.exit(app.exec())
+
 
 if __name__ == "__main__":
     run_app()
