@@ -21,7 +21,7 @@ print(f"[🔍 MODEL PATH]: {MODEL_PATH}")
 print(f"[📂 File Exists]:", os.path.isfile(WHISPER_BIN), os.path.isfile(MODEL_PATH))
 
 def transcribe_with_whisper_cpp(wav_path: str) -> str:
-    txt_path = wav_path.replace(".wav", ".txt")
+    txt_path = wav_path + ".txt"
 
     try:
         result = subprocess.run([
@@ -85,11 +85,13 @@ def start_listening(callback=None):
             print(f"[🗣 Heard]: {text}")
 
             if any(word in text for word in WAKE_WORDS):
-                command = re.sub(r"^(hey\s+)?hostess[, ]*", "", text)
-                print(f"[🤖 Wake word detected]: {command}")
-                if command:
+                command = re.sub(r"^(hey\\s+)?hostess[, ]*", "", text)
+                print(f"[🤖 Wake word detected]: {command!r}")
+                if command.strip():
                     if callback:
-                        callback(command)
+                        callback(command.strip())
+                else:
+                    print("[ℹ️ No follow-up command after wake word]")
 
     thread = threading.Thread(target=listen_loop, daemon=True)
     thread.start()

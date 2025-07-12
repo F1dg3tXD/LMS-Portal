@@ -182,3 +182,5 @@ cython_debug/
 prompt.txt
 *.gguf
 /bin/whisper
+*.wav
+temp.wav.txt
