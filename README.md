@@ -16,7 +16,9 @@ A modern web frontend for LM Studio, featuring integrated internet search and vo
 
 1. **Launch LM Studio** with your preferred model loaded.
 2. **Customize** your model by editing or creating a `prompt.txt` file.
-3. **Run the Portal:**
+3. Add your whisperCPP binary in `bin/whisper/whisper-cli.exe`
+4. Add your whisper model in `models/whisper-model.gguf`
+5. **Run the Portal:**
    ```sh
    python main.py
    ```
