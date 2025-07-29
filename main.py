@@ -84,7 +84,7 @@ class HostessApp(QMainWindow):
 
     def toggle_listening(self):
         if self.is_listening:
-            stop_listening()
+            stop_listening(callback=self.handle_voice_command)  # <-- Pass callback
             self.listen_button.setText("🎤 Start Listening")
             self.is_listening = False
         else:
