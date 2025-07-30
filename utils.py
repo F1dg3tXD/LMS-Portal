@@ -1,21 +1,9 @@
-import requests
+from langchain_community.tools import DuckDuckGoSearchRun
 
 def search_duckduckgo(query):
     try:
-        resp = requests.get("https://api.duckduckgo.com/", params={
-            "q": query,
-            "format": "json",
-            "no_html": 1,
-            "skip_disambig": 1
-        })
-        data = resp.json()
-        abstract = data.get("Abstract", "")
-        heading = data.get("Heading", "")
-        url = data.get("AbstractURL", "")
-
-        if abstract:
-            return f"🔍 {heading}: {abstract}\n{url}"
-        else:
-            return "No summary found, but you can try: https://duckduckgo.com/?q=" + query
+        search = DuckDuckGoSearchRun()
+        result = search.run(query)
+        return result
     except Exception as e:
-        return f"Search error: {e}"
+        return f"LangChain search error: {e}"
