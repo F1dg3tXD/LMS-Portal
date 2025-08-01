@@ -1,35 +1,44 @@
 import os
+import asyncio
 import subprocess
-import torch
-import collections
-from TTS.utils.radam import RAdam
+from edge_tts import Communicate
+from pydub import AudioSegment
+import simpleaudio as sa
 
-# Add both RAdam and collections.defaultdict to safe globals
-torch.serialization.add_safe_globals([RAdam, collections.defaultdict])
 
-from TTS.api import TTS
-from PyQt6.QtCore import QTimer, QCoreApplication
-import sounddevice as sd
-import numpy as np
+# Function to list only en-US and en-GB female voices
+# Used to find best voice for the hostess
+async def list_voices():
+    voices = await edge_tts.list_voices()
+    print("en-US / en-GB Female voices:\n" + "-" * 50)
+    for voice in voices:
+        locale = voice.get('Locale', '').lower()
+        gender = voice.get('Gender', '').lower()
+        if gender == 'female' and locale in ('en-us', 'en-gb'):
+            print(f"Name      : {voice.get('ShortName')}")
+            print(f"Locale    : {voice.get('Locale')}")
+            print(f"Gender    : {voice.get('Gender')}")
+            print(f"Voice Type: {voice.get('VoiceType')}")
+            print(f"Friendly  : {voice.get('FriendlyName', 'N/A')}")
+            print("-" * 50)
 
-COQUI_MODEL = "tts_models/en/ek1/tacotron2"  # Example: British English female
+# Async speak function with internal audio playback
+async def speak(text, voice="en-GB-SoniaNeural"):
+    output_path = "output.mp3"
+    try:
+        # Generate MP3 using edge-tts
+        communicate = Communicate(text=text, voice=voice)
+        await communicate.save(output_path)
 
-tts = TTS(COQUI_MODEL)
+        # Load and play audio using pydub and simpleaudio
+        sound = AudioSegment.from_file(output_path, format="mp3")
+        play_obj = sa.play_buffer(
+            sound.raw_data,
+            num_channels=sound.channels,
+            bytes_per_sample=sound.sample_width,
+            sample_rate=sound.frame_rate
+        )
+        play_obj.wait_done()  # Wait for playback to finish
 
-def speak(text):
-    """
-    Synthesize and play speech from text using Coqui TTS with a British English female voice.
-    This function is safe to call from any thread.
-    """
-    def do_speak():
-        # Synthesize speech to numpy array
-        wav = tts.tts(text=text, speaker=tts.speakers[0] if hasattr(tts, "speakers") else None)
-        # Play audio using sounddevice
-        sd.play(wav, tts.synthesizer.output_sample_rate)
-        sd.wait()
-    # Ensure TTS runs on the main thread
-    app = QCoreApplication.instance()
-    if app and hasattr(QTimer, "singleShot"):
-        QTimer.singleShot(0, do_speak)
-    else:
-        do_speak()
+    except Exception as e:
+        print(f"[Speak Error] {e}")

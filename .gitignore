@@ -184,3 +184,5 @@ prompt.txt
 /bin/whisper
 *.wav
 temp.wav.txt
+*.mp3
+/memory
