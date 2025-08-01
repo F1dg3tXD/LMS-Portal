@@ -1,6 +1,6 @@
 # 🚀 LMS Portal
 
-A modern web frontend for LM Studio, featuring integrated internet search and voice input via Whisper.
+A "modern" frontend for LM Studio, featuring integrated internet search and voice input via Whisper.
 
 ---
 
